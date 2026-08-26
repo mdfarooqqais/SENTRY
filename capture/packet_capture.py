@@ -2,6 +2,7 @@ from scapy.all import sniff
 
 from capture.packet_processor import extract_packet_features
 from detection.rule_engine import analyze_packet
+from detection.signature_engine import match_signatures
 
 
 def process_packet(packet):
@@ -17,15 +18,22 @@ def process_packet(packet):
     print(f"Destination Port: {features['destination_port']}")
     print(f"Packet Size: {features['packet_size']}")
 
-    detections = analyze_packet(features)
+    rule_detections = analyze_packet(features)
+    signature_detections = match_signatures(features)
 
-    if detections:
+    if rule_detections or signature_detections:
         print("\n!!! SECURITY ALERT !!!")
 
-        for detection in detections:
-            print(f"Attack Type : {detection['attack_type']}")
-            print(f"Severity    : {detection['severity']}")
-            print(f"Reason      : {detection['reason']}")
+        for detection in rule_detections:
+            print(f"[RULE] {detection['attack_type']}")
+            print(f"Severity: {detection['severity']}")
+            print(f"Reason: {detection['reason']}")
+
+        for detection in signature_detections:
+            print(f"[SIGNATURE] {detection['signature']}")
+            print(f"Attack Type: {detection['attack_type']}")
+            print(f"Severity: {detection['severity']}")
+            print(f"Reason: {detection['reason']}")
 
     else:
         print("Status: Normal")
@@ -33,7 +41,8 @@ def process_packet(packet):
 
 def start_capture():
     print("SENTRY Packet Capture Started")
-    print("Rule-Based Detection Enabled")
+    print("Rule-Based Detection: ENABLED")
+    print("Signature-Based Detection: ENABLED")
     print("Capturing packets... Press CTRL+C to stop.")
 
     sniff(

@@ -32,6 +32,67 @@ def init_database():
     connection.close()
 
 
+def save_alert(
+    source_ip,
+    destination_ip,
+    source_port,
+    destination_port,
+    protocol,
+    detection_type,
+    attack_type,
+    severity,
+    confidence=0
+):
+    connection = get_connection()
+
+    connection.execute("""
+        INSERT INTO alerts (
+            timestamp,
+            source_ip,
+            destination_ip,
+            source_port,
+            destination_port,
+            protocol,
+            detection_type,
+            attack_type,
+            severity,
+            confidence
+        )
+        VALUES (
+            datetime('now'),
+            ?, ?, ?, ?, ?, ?, ?, ?, ?
+        )
+    """, (
+        source_ip,
+        destination_ip,
+        source_port,
+        destination_port,
+        protocol,
+        detection_type,
+        attack_type,
+        severity,
+        confidence
+    ))
+
+    connection.commit()
+    connection.close()
+
+
+def get_alerts(limit=100):
+    connection = get_connection()
+
+    alerts = connection.execute("""
+        SELECT *
+        FROM alerts
+        ORDER BY id DESC
+        LIMIT ?
+    """, (limit,)).fetchall()
+
+    connection.close()
+
+    return alerts
+
+
 if __name__ == "__main__":
     init_database()
     print("Database initialized successfully.")

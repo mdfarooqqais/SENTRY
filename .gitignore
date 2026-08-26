@@ -1,0 +1,23 @@
+venv/
+__pycache__/
+*.py[cod]
+.env
+*.db
+*.sqlite
+*.sqlite3
+*.log
+
+# Machine Learning
+*.pkl
+*.joblib
+
+# Dataset
+data/
+*.csv
+
+# VS Code
+.vscode/
+
+# Python
+.pytest_cache/
+.mypy_cache/

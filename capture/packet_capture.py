@@ -1,39 +1,12 @@
-from scapy.all import sniff, IP, TCP, UDP, ICMP
-from datetime import datetime
+from scapy.all import sniff
+from capture.packet_processor import extract_packet_features, display_features
 
 
 def process_packet(packet):
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    features = extract_packet_features(packet)
 
-    if IP in packet:
-        source_ip = packet[IP].src
-        destination_ip = packet[IP].dst
-        packet_size = len(packet)
-
-        protocol = "OTHER"
-        source_port = None
-        destination_port = None
-
-        if TCP in packet:
-            protocol = "TCP"
-            source_port = packet[TCP].sport
-            destination_port = packet[TCP].dport
-
-        elif UDP in packet:
-            protocol = "UDP"
-            source_port = packet[UDP].sport
-            destination_port = packet[UDP].dport
-
-        elif ICMP in packet:
-            protocol = "ICMP"
-
-        print(
-            f"[{timestamp}] "
-            f"{source_ip}:{source_port} -> "
-            f"{destination_ip}:{destination_port} | "
-            f"{protocol} | "
-            f"Size: {packet_size}"
-        )
+    if features["source_ip"] is not None:
+        display_features(features)
 
 
 def start_capture():

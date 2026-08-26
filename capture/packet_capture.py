@@ -1,15 +1,67 @@
+import threading
+import time
+
 from scapy.all import sniff
 
 from capture.packet_processor import extract_packet_features
+from capture.flow_tracker import FlowTracker
+from capture.flow_features import extract_flow_features
+
 from detection.rule_engine import analyze_packet
 from detection.signature_engine import match_signatures
 
+from ml.predict import predict_attack
+
+
+flow_tracker = FlowTracker(timeout=10)
+
+
+def process_expired_flows():
+    while True:
+        time.sleep(2)
+
+        expired_flows = flow_tracker.get_expired_flows()
+
+        for key in expired_flows:
+            flow = flow_tracker.get_flow(key)
+
+            if flow is None:
+                continue
+
+            try:
+                flow_features = extract_flow_features(flow)
+
+                if flow_features:
+                    prediction = predict_attack(flow_features)
+
+                    print("\n========== ML FLOW DETECTION ==========")
+                    print(f"Source: {key[0]}:{key[1]}")
+                    print(f"Destination: {key[2]}:{key[3]}")
+                    print(f"Protocol: {key[4]}")
+                    print(f"Attack: {prediction['attack']}")
+                    print(f"Confidence: {prediction['confidence']}%")
+
+                    if prediction["attack"] != "BENIGN":
+                        print("!!! ML SECURITY ALERT !!!")
+                    else:
+                        print("Status: Normal")
+
+                    print("=======================================\n")
+
+            except Exception as e:
+                print(f"ML flow prediction error: {e}")
+
+            flow_tracker.remove_flow(key)
+
 
 def process_packet(packet):
+
     features = extract_packet_features(packet)
 
     if features["source_ip"] is None:
         return
+
+    flow_tracker.add_packet(packet)
 
     print("\n--- Packet ---")
     print(f"{features['source_ip']} -> {features['destination_ip']}")
@@ -22,6 +74,7 @@ def process_packet(packet):
     signature_detections = match_signatures(features)
 
     if rule_detections or signature_detections:
+
         print("\n!!! SECURITY ALERT !!!")
 
         for detection in rule_detections:
@@ -40,10 +93,20 @@ def process_packet(packet):
 
 
 def start_capture():
+
     print("SENTRY Packet Capture Started")
     print("Rule-Based Detection: ENABLED")
     print("Signature-Based Detection: ENABLED")
+    print("Flow Tracking: ENABLED")
+    print("ML Detection: ENABLED")
     print("Capturing packets... Press CTRL+C to stop.")
+
+    thread = threading.Thread(
+        target=process_expired_flows,
+        daemon=True
+    )
+
+    thread.start()
 
     sniff(
         prn=process_packet,

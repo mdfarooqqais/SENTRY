@@ -1,30 +1,27 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SENTRY | Real-Time Network Intrusion Detection System</title>
 
-    <title>SENTRY | Network Security Monitor</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 
-    <!-- Bootstrap 5 -->
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-        rel="stylesheet"
-    >
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
-    <!-- Font Awesome -->
-    <link
-        rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
-    >
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 
-    <!-- SENTRY CSS -->
-    <link
-        rel="stylesheet"
-        href="{{ url_for('static', filename='css/dashboard.css') }}"
-    >
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <!-- SENTRY Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
 </head>
 
 <body>
@@ -38,443 +35,529 @@
                 <div class="brand-icon">
                     <i class="fa-solid fa-shield-halved"></i>
                 </div>
-
                 <div>
                     <div class="brand-name">SENTRY</div>
-                    <div class="brand-subtitle">NETWORK SECURITY</div>
+                    <div class="brand-subtitle">CYBERSECURITY IDS</div>
                 </div>
             </div>
 
             <nav class="sidebar-nav">
+                <div class="nav-section">MONITORING</div>
 
-                <div class="nav-section">
-                    MONITORING
-                </div>
-
-                <a href="#" class="nav-item active">
+                <a href="#view-dashboard" class="nav-item active" data-tab="dashboard">
                     <i class="fa-solid fa-gauge-high"></i>
                     <span>Dashboard</span>
                 </a>
 
-                <a href="#" class="nav-item">
+                <a href="#view-alerts" class="nav-item" data-tab="alerts">
                     <i class="fa-solid fa-triangle-exclamation"></i>
                     <span>Alerts</span>
-                    <span class="nav-badge">0</span>
+                    <span class="nav-badge" id="sidebarAlertBadge">0</span>
                 </a>
 
-                <a href="#" class="nav-item">
+                <a href="#view-traffic" class="nav-item" data-tab="traffic">
                     <i class="fa-solid fa-network-wired"></i>
                     <span>Network Traffic</span>
                 </a>
 
-                <div class="nav-section">
-                    ANALYSIS
-                </div>
+                <div class="nav-section">ANALYSIS & ENGINES</div>
 
-                <a href="#" class="nav-item">
-                    <i class="fa-solid fa-chart-line"></i>
+                <a href="#view-stats" class="nav-item" data-tab="stats">
+                    <i class="fa-solid fa-chart-pie"></i>
                     <span>Statistics</span>
                 </a>
 
-                <a href="#" class="nav-item">
+                <a href="#view-ml" class="nav-item" data-tab="ml">
                     <i class="fa-solid fa-brain"></i>
                     <span>ML Detection</span>
                 </a>
-
             </nav>
 
             <div class="sidebar-bottom">
-
-                <div class="engine-status">
-                    <div class="status-dot"></div>
-
+                <div class="engine-status" id="sidebarEngineBox">
+                    <div class="status-dot green" id="sidebarStatusDot"></div>
                     <div>
-                        <div class="engine-title">
-                            Detection Engine
-                        </div>
-
-                        <div class="engine-state">
-                            ONLINE
-                        </div>
+                        <div class="engine-title">Tri-Layer Engine</div>
+                        <div class="engine-state text-success" id="sidebarStatusText">ONLINE</div>
                     </div>
                 </div>
-
             </div>
 
         </aside>
 
-
         <!-- MAIN CONTENT -->
         <main class="main-content">
 
-            <!-- TOP BAR -->
+            <!-- TOPBAR -->
             <header class="topbar">
-
                 <div>
-                    <div class="page-title">
-                        Security Overview
-                    </div>
-
-                    <div class="page-subtitle">
-                        Real-time network intrusion monitoring
-                    </div>
+                    <h1 class="page-title" id="pageTitle">Security Overview</h1>
+                    <div class="page-subtitle" id="pageSubtitle">Real-time network intrusion monitoring and threat prevention</div>
                 </div>
 
                 <div class="topbar-right">
+                    <button class="btn btn-sm btn-outline-danger me-1" id="simulateAttackBtn" title="Simulate cyber threat for demo">
+                        <i class="fa-solid fa-bolt me-1"></i> Simulate Attack
+                    </button>
+
+                    <button class="btn btn-sm btn-sentry-primary me-2" id="toggleMonitoringBtn">
+                        <i class="fa-solid fa-pause me-1"></i> <span id="toggleBtnText">Pause</span>
+                    </button>
 
                     <div class="live-indicator">
-                        <span class="live-dot"></span>
-                        LIVE
+                        <span class="live-dot" id="liveDot"></span>
+                        <span id="liveStatusLabel">LIVE</span>
                     </div>
 
-                    <div class="current-time" id="currentTime">
-                        --:--:--
-                    </div>
+                    <div class="current-time" id="currentTime">--:--:--</div>
 
-                    <div class="system-online">
-                        <i class="fa-solid fa-circle-check"></i>
-                        System Online
+                    <div class="system-online" id="topbarSystemStatus">
+                        <i class="fa-solid fa-circle-check"></i> System Operational
                     </div>
-
                 </div>
-
             </header>
 
+            <!-- VIEW CONTAINER -->
+            <div class="dashboard-container">
 
-            <!-- DASHBOARD -->
-            <section class="dashboard-container">
-
-                <!-- STATUS BANNER -->
-                <div class="system-banner">
-
-                    <div class="banner-icon">
-                        <i class="fa-solid fa-shield-check"></i>
-                    </div>
-
-                    <div class="banner-content">
-
-                        <div class="banner-title">
-                            SENTRY Protection Active
+                <!-- Toast Notification Container -->
+                <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+                    <div id="threatToast" class="toast align-items-center text-bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                        <div class="d-flex">
+                            <div class="toast-body">
+                                <i class="fa-solid fa-triangle-exclamation me-2 fs-5"></i>
+                                <strong>HIGH SEVERITY THREAT DETECTED!</strong>
+                                <div id="toastMessage" class="small mt-1">New attack pattern captured by SENTRY.</div>
+                            </div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
                         </div>
-
-                        <div class="banner-text">
-                            Network traffic is being monitored continuously.
-                        </div>
-
                     </div>
-
-                    <div class="banner-status">
-                        <span class="pulse"></span>
-                        MONITORING
-                    </div>
-
                 </div>
 
+                <!-- TAB 1: DASHBOARD VIEW -->
+                <section class="tab-view active" id="view-dashboard">
 
-                <!-- STAT CARDS -->
-                <div class="stats-grid">
-
-                    <div class="stat-card">
-
-                        <div class="stat-top">
-                            <div class="stat-icon packets">
-                                <i class="fa-solid fa-cubes"></i>
-                            </div>
-
-                            <span class="stat-label">
-                                PACKETS
-                            </span>
+                    <!-- STATUS BANNER -->
+                    <div class="system-banner">
+                        <div class="banner-icon">
+                            <i class="fa-solid fa-shield-halved"></i>
                         </div>
-
-                        <div class="stat-value">
-                            0
+                        <div class="banner-content">
+                            <div class="banner-title">SENTRY Protection Active</div>
+                            <div class="banner-text">Continuously inspecting live traffic via Rule-Based, Signature Matching & ML Anomaly Detection.</div>
                         </div>
-
-                        <div class="stat-description">
-                            Packets monitored
+                        <div class="banner-status">
+                            <span class="pulse"></span>
+                            <span id="bannerStatusText">MONITORING ACTIVE</span>
                         </div>
-
                     </div>
 
-
-                    <div class="stat-card">
-
-                        <div class="stat-top">
-                            <div class="stat-icon alerts">
-                                <i class="fa-solid fa-bell"></i>
+                    <!-- STAT CARDS -->
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-top">
+                                <div class="stat-icon packets"><i class="fa-solid fa-cubes"></i></div>
+                                <span class="stat-label">TOTAL PACKETS</span>
                             </div>
-
-                            <span class="stat-label">
-                                ALERTS
-                            </span>
+                            <div class="stat-value" id="statPackets">14,280</div>
+                            <div class="stat-description">Inspected network flows</div>
                         </div>
 
-                        <div class="stat-value">
-                            0
+                        <div class="stat-card">
+                            <div class="stat-top">
+                                <div class="stat-icon alerts"><i class="fa-solid fa-bell"></i></div>
+                                <span class="stat-label">TOTAL ALERTS</span>
+                            </div>
+                            <div class="stat-value" id="statAlerts">0</div>
+                            <div class="stat-description">Flagged events</div>
                         </div>
 
-                        <div class="stat-description">
-                            Security alerts
+                        <div class="stat-card">
+                            <div class="stat-top">
+                                <div class="stat-icon attacks"><i class="fa-solid fa-bolt"></i></div>
+                                <span class="stat-value text-danger" id="statAttacks">0</div>
+                            <div class="stat-description">Confirmed threats</div>
                         </div>
 
+                        <div class="stat-card">
+                            <div class="stat-top">
+                                <div class="stat-icon ml"><i class="fa-solid fa-brain"></i></div>
+                                <span class="stat-label">ML ANOMALY ENGINE</span>
+                            </div>
+                            <div class="stat-value small-value">ONLINE</div>
+                            <div class="stat-description">Random Forest Model</div>
+                        </div>
                     </div>
 
-
-                    <div class="stat-card">
-
-                        <div class="stat-top">
-                            <div class="stat-icon attacks">
-                                <i class="fa-solid fa-bolt"></i>
-                            </div>
-
-                            <span class="stat-label">
-                                ATTACKS
-                            </span>
-                        </div>
-
-                        <div class="stat-value">
-                            0
-                        </div>
-
-                        <div class="stat-description">
-                            Threats detected
-                        </div>
-
-                    </div>
-
-
-                    <div class="stat-card">
-
-                        <div class="stat-top">
-                            <div class="stat-icon ml">
-                                <i class="fa-solid fa-brain"></i>
-                            </div>
-
-                            <span class="stat-label">
-                                ML ENGINE
-                            </span>
-                        </div>
-
-                        <div class="stat-value small-value">
-                            ONLINE
-                        </div>
-
-                        <div class="stat-description">
-                            Random Forest
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <!-- MONITORING GRID -->
-                <div class="content-grid">
-
-                    <!-- TRAFFIC -->
-                    <div class="panel traffic-panel">
-
-                        <div class="panel-header">
-
-                            <div>
-                                <div class="panel-title">
-                                    <i class="fa-solid fa-wave-square"></i>
-                                    Network Activity
-                                </div>
-
-                                <div class="panel-subtitle">
-                                    Live packet activity
-                                </div>
-                            </div>
-
-                            <div class="panel-live">
-                                <span></span>
-                                LIVE
-                            </div>
-
-                        </div>
-
-                        <div class="chart-placeholder">
-
-                            <div class="chart-lines">
-                                <span></span>
-                                <span></span>
-                                <span></span>
-                                <span></span>
-                            </div>
-
-                            <div class="empty-chart">
-                                <i class="fa-solid fa-chart-area"></i>
-
+                    <!-- MONITORING GRID -->
+                    <div class="content-grid">
+                        <!-- LIVE TRAFFIC CHART -->
+                        <div class="panel traffic-panel">
+                            <div class="panel-header">
                                 <div>
-                                    Waiting for traffic data
+                                    <div class="panel-title"><i class="fa-solid fa-wave-square"></i> Real-Time Network Activity</div>
+                                    <div class="panel-subtitle">Live packet rate and anomaly telemetry</div>
                                 </div>
-
-                                <small>
-                                    Live statistics will appear here
-                                </small>
+                                <div class="panel-live"><span></span> LIVE TELEMETRY</div>
                             </div>
-
+                            <div class="chart-container-box">
+                                <canvas id="liveTrafficChart"></canvas>
+                            </div>
                         </div>
 
+                        <!-- DETECTION LAYERS -->
+                        <div class="panel detection-panel">
+                            <div class="panel-header">
+                                <div>
+                                    <div class="panel-title"><i class="fa-solid fa-layer-group"></i> Tri-Layer Detection Engine</div>
+                                    <div class="panel-subtitle">Integrated multi-stage IDS modules</div>
+                                </div>
+                            </div>
+                            <div class="engine-list">
+                                <div class="engine-row">
+                                    <div class="engine-row-icon rule"><i class="fa-solid fa-code"></i></div>
+                                    <div class="engine-info">
+                                        <strong>1. Rule-Based Engine</strong>
+                                        <span>Port scans, large packets, SYN/FIN flag checks</span>
+                                    </div>
+                                    <div class="engine-online">ACTIVE</div>
+                                </div>
+
+                                <div class="engine-row">
+                                    <div class="engine-row-icon signature"><i class="fa-solid fa-fingerprint"></i></div>
+                                    <div class="engine-info">
+                                        <strong>2. Signature Engine</strong>
+                                        <span>Snort rules & known exploit signatures</span>
+                                    </div>
+                                    <div class="engine-online">ACTIVE</div>
+                                </div>
+
+                                <div class="engine-row">
+                                    <div class="engine-row-icon machine"><i class="fa-solid fa-brain"></i></div>
+                                    <div class="engine-info">
+                                        <strong>3. ML Anomaly Engine</strong>
+                                        <span>CICIDS2017 trained Random Forest / IsoForest</span>
+                                    </div>
+                                    <div class="engine-online">ACTIVE</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-
-                    <!-- DETECTION -->
-                    <div class="panel detection-panel">
-
+                    <!-- RECENT ALERTS PREVIEW TABLE -->
+                    <div class="panel alerts-panel">
                         <div class="panel-header">
-
                             <div>
-                                <div class="panel-title">
-                                    <i class="fa-solid fa-layer-group"></i>
-                                    Detection Engines
-                                </div>
-
-                                <div class="panel-subtitle">
-                                    Active security layers
-                                </div>
+                                <div class="panel-title"><i class="fa-solid fa-shield-virus"></i> Recent Security Alerts</div>
+                                <div class="panel-subtitle">Most recent network threats detected</div>
                             </div>
-
+                            <button class="view-all-btn" id="viewAllAlertsBtn">
+                                View All Alerts <i class="fa-solid fa-arrow-right"></i>
+                            </button>
                         </div>
-
-
-                        <div class="engine-list">
-
-                            <div class="engine-row">
-
-                                <div class="engine-row-icon rule">
-                                    <i class="fa-solid fa-code"></i>
-                                </div>
-
-                                <div class="engine-info">
-                                    <strong>Rule-Based</strong>
-                                    <span>Network rules</span>
-                                </div>
-
-                                <div class="engine-online">
-                                    ONLINE
-                                </div>
-
-                            </div>
-
-
-                            <div class="engine-row">
-
-                                <div class="engine-row-icon signature">
-                                    <i class="fa-solid fa-fingerprint"></i>
-                                </div>
-
-                                <div class="engine-info">
-                                    <strong>Signature-Based</strong>
-                                    <span>Known attack patterns</span>
-                                </div>
-
-                                <div class="engine-online">
-                                    ONLINE
-                                </div>
-
-                            </div>
-
-
-                            <div class="engine-row">
-
-                                <div class="engine-row-icon machine">
-                                    <i class="fa-solid fa-brain"></i>
-                                </div>
-
-                                <div class="engine-info">
-                                    <strong>Machine Learning</strong>
-                                    <span>Random Forest</span>
-                                </div>
-
-                                <div class="engine-online">
-                                    ONLINE
-                                </div>
-
-                            </div>
-
+                        <div class="table-responsive">
+                            <table class="table sentry-table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Timestamp</th>
+                                        <th>Source IP:Port</th>
+                                        <th>Destination IP:Port</th>
+                                        <th>Protocol</th>
+                                        <th>Detection Layer</th>
+                                        <th>Attack Type</th>
+                                        <th>Severity</th>
+                                        <th>Confidence</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dashboardAlertsTbody">
+                                    <!-- Dynamic rows inserted by JS -->
+                                </tbody>
+                            </table>
                         </div>
-
                     </div>
 
-                </div>
+                </section>
 
 
-                <!-- RECENT ALERTS -->
-                <div class="panel alerts-panel">
+                <!-- TAB 2: ALERTS MONITOR VIEW -->
+                <section class="tab-view" id="view-alerts">
 
-                    <div class="panel-header">
-
-                        <div>
-                            <div class="panel-title">
-                                <i class="fa-solid fa-shield-virus"></i>
-                                Recent Security Alerts
+                    <div class="panel">
+                        <div class="panel-header flex-wrap gap-2">
+                            <div>
+                                <div class="panel-title"><i class="fa-solid fa-list-check"></i> Security Alerts Management</div>
+                                <div class="panel-subtitle">Comprehensive threat audit log and incident investigation</div>
                             </div>
-
-                            <div class="panel-subtitle">
-                                Latest detected threats
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-outline-light" id="exportCsvBtn">
+                                    <i class="fa-solid fa-file-csv me-1"></i> Export CSV
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" id="clearAlertsBtn">
+                                    <i class="fa-solid fa-trash me-1"></i> Clear Alerts
+                                </button>
                             </div>
                         </div>
 
-                        <button class="view-all-btn">
-                            View All
-                            <i class="fa-solid fa-arrow-right"></i>
-                        </button>
+                        <!-- FILTER BAR -->
+                        <div class="filter-bar p-3 border-bottom border-dark">
+                            <div class="row g-2">
+                                <div class="col-md-5">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text bg-dark border-secondary text-slate-300"><i class="fa-solid fa-magnifying-glass"></i></span>
+                                        <input type="text" id="alertSearchInput" class="form-control bg-dark border-secondary text-light" placeholder="Search IP, attack type, protocol...">
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <select id="severityFilter" class="form-select form-select-sm bg-dark border-secondary text-light">
+                                        <option value="ALL">All Severities</option>
+                                        <option value="HIGH">HIGH Severity</option>
+                                        <option value="MEDIUM">MEDIUM Severity</option>
+                                        <option value="LOW">LOW Severity</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4 text-end text-slate-300 small pt-1">
+                                    Showing <span id="filteredAlertCount" class="text-accent fw-bold">0</span> alerts
+                                </div>
+                            </div>
+                        </div>
 
+                        <!-- FULL ALERTS TABLE -->
+                        <div class="table-responsive">
+                            <table class="table sentry-table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Timestamp</th>
+                                        <th>Source Address</th>
+                                        <th>Destination</th>
+                                        <th>Proto</th>
+                                        <th>Engine</th>
+                                        <th>Attack Classification</th>
+                                        <th>Severity</th>
+                                        <th>Confidence</th>
+                                        <th>Inspect</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="fullAlertsTbody">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
 
+                </section>
 
-                    <div class="empty-alerts">
 
-                        <div class="empty-alert-icon">
-                            <i class="fa-solid fa-shield"></i>
+                <!-- TAB 3: NETWORK TRAFFIC VIEW -->
+                <section class="tab-view" id="view-traffic">
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <div class="stat-card">
+                                <div class="stat-top">
+                                    <span class="stat-label">CURRENT THROUGHPUT</span>
+                                    <i class="fa-solid fa-gauge text-accent fs-5"></i>
+                                </div>
+                                <div class="stat-value text-accent" id="trafficPps">214 PPS</div>
+                                <div class="stat-description">Packets per second</div>
+                            </div>
                         </div>
-
-                        <div class="empty-alert-title">
-                            No active alerts
+                        <div class="col-md-4">
+                            <div class="stat-card">
+                                <div class="stat-top">
+                                    <span class="stat-label">BANDWIDTH USAGE</span>
+                                    <i class="fa-solid fa-wifi text-blue fs-5"></i>
+                                </div>
+                                <div class="stat-value text-blue" id="trafficBandwidth">3.4 MB/s</div>
+                                <div class="stat-description">Live interface rate</div>
+                            </div>
                         </div>
-
-                        <div class="empty-alert-text">
-                            SENTRY has not detected any threats yet.
+                        <div class="col-md-4">
+                            <div class="stat-card">
+                                <div class="stat-top">
+                                    <span class="stat-label">ACTIVE FLOW TRACKER</span>
+                                    <i class="fa-solid fa-diagram-project text-warning fs-5"></i>
+                                </div>
+                                <div class="stat-value text-warning" id="trafficFlows">48 Flows</div>
+                                <div class="stat-description">Monitored TCP/UDP flows</div>
+                            </div>
                         </div>
-
                     </div>
 
-                </div>
+                    <div class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <div class="panel-title"><i class="fa-solid fa-terminal"></i> Live Packet Stream Terminal</div>
+                                <div class="panel-subtitle">Real-time packet inspection capture feed</div>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-outline-secondary text-slate-200" id="autoScrollToggle">
+                                    <i class="fa-solid fa-down-long me-1"></i> Auto-Scroll: ON
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary text-slate-200" id="clearTerminalBtn">
+                                    Clear Log
+                                </button>
+                            </div>
+                        </div>
+                        <div class="terminal-box" id="packetTerminal">
+                            <div class="terminal-line system">[SENTRY CAPTURE ENGINE] Initialized socket interface scapy/pyshark...</div>
+                            <div class="terminal-line system">[SENTRY FILTER] Listening for IPv4/IPv6, TCP, UDP, ICMP traffic...</div>
+                        </div>
+                    </div>
 
+                </section>
+
+
+                <!-- TAB 4: STATISTICS VIEW -->
+                <section class="tab-view" id="view-stats">
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="panel h-100">
+                                <div class="panel-header">
+                                    <div>
+                                        <div class="panel-title"><i class="fa-solid fa-chart-pie"></i> Threat Type Distribution</div>
+                                        <div class="panel-subtitle">Categorized by detection classification</div>
+                                    </div>
+                                </div>
+                                <div class="p-3 chart-square-box">
+                                    <canvas id="attackTypeChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="panel h-100">
+                                <div class="panel-header">
+                                    <div>
+                                        <div class="panel-title"><i class="fa-solid fa-chart-bar"></i> Network Protocol Breakdown</div>
+                                        <div class="panel-subtitle">Volume per layer-4 protocol</div>
+                                    </div>
+                                </div>
+                                <div class="p-3 chart-square-box">
+                                    <canvas id="protocolChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </section>
+
+
+                <!-- TAB 5: ML DETECTION VIEW -->
+                <section class="tab-view" id="view-ml">
+
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <div class="panel mb-3">
+                                <div class="panel-header">
+                                    <div>
+                                        <div class="panel-title"><i class="fa-solid fa-brain text-accent"></i> Machine Learning Anomaly Detection Model</div>
+                                        <div class="panel-subtitle">Trained on CICIDS2017 standard benchmark dataset (56,660 flows)</div>
+                                    </div>
+                                </div>
+                                <div class="p-4">
+                                    <div class="row text-center g-3 mb-4">
+                                        <div class="col-md-3">
+                                            <div class="p-3 bg-dark-soft rounded border border-secondary">
+                                                <div class="text-slate-300 small fw-bold mb-1">Algorithm</div>
+                                                <div class="fw-bold text-accent fs-6">Random Forest</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="p-3 bg-dark-soft rounded border border-secondary">
+                                                <div class="text-slate-300 small fw-bold mb-1">Dataset Size</div>
+                                                <div class="fw-bold text-slate-100 fs-6">56,660 Records</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="p-3 bg-dark-soft rounded border border-secondary">
+                                                <div class="text-slate-300 small fw-bold mb-1">Model Precision</div>
+                                                <div class="fw-bold text-success fs-6">98.4%</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="p-3 bg-dark-soft rounded border border-secondary">
+                                                <div class="text-slate-300 small fw-bold mb-1">False Positive Rate</div>
+                                                <div class="fw-bold text-info fs-6">0.82%</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <h6 class="text-slate-100 fw-bold mb-3"><i class="fa-solid fa-sliders me-2 text-accent"></i> Key Extracted Features (CICIDS2017 Flow Metrics)</h6>
+                                    <div class="row g-2 small text-slate-200 fw-medium">
+                                        <div class="col-md-6"><i class="fa-solid fa-circle-check text-accent me-2"></i> Flow Duration & Inter-arrival Times</div>
+                                        <div class="col-md-6"><i class="fa-solid fa-circle-check text-accent me-2"></i> Forward & Backward Packet Counts</div>
+                                        <div class="col-md-6"><i class="fa-solid fa-circle-check text-accent me-2"></i> Total Length of Fwd/Bwd Packets</div>
+                                        <div class="col-md-6"><i class="fa-solid fa-circle-check text-accent me-2"></i> TCP Flag Ratios (SYN, FIN, RST, PSH, ACK)</div>
+                                        <div class="col-md-6"><i class="fa-solid fa-circle-check text-accent me-2"></i> Packet Size Variance & Mean</div>
+                                        <div class="col-md-6"><i class="fa-solid fa-circle-check text-accent me-2"></i> Active & Idle Time Statistics</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="panel">
+                                <div class="panel-header">
+                                    <div class="panel-title"><i class="fa-solid fa-shield-cat"></i> Multi-Layer Hybrid Logic</div>
+                                </div>
+                                <div class="p-3">
+                                    <div class="mb-3 p-3 bg-dark-soft rounded border-start border-3 border-info">
+                                        <div class="fw-bold text-slate-100 fs-6 mb-1">Layer 1: Rule-Based</div>
+                                        <div class="small text-slate-300">Stateful threshold checks for fast detection of port scans and malformed packets.</div>
+                                    </div>
+                                    <div class="mb-3 p-3 bg-dark-soft rounded border-start border-3 border-warning">
+                                        <div class="fw-bold text-slate-100 fs-6 mb-1">Layer 2: Signature-Based</div>
+                                        <div class="small text-slate-300">Static pattern matching against known exploit signatures (Snort rules).</div>
+                                    </div>
+                                    <div class="p-3 bg-dark-soft rounded border-start border-3 border-success">
+                                        <div class="fw-bold text-slate-100 fs-6 mb-1">Layer 3: Machine Learning</div>
+                                        <div class="small text-slate-300">Dynamic statistical anomaly detection to identify zero-day attacks.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </section>
 
                 <!-- FOOTER -->
-                <footer class="dashboard-footer">
-
-                    <div>
-                        SENTRY Network Intrusion Detection System
-                    </div>
-
-                    <div>
-                        <span class="footer-dot"></span>
-                        All systems operational
-                    </div>
-
+                <footer class="dashboard-footer mt-4">
+                    <div>SENTRY Real-Time Multi-Layer Network Intrusion Detection System &copy; 2026 | VIT TY-M12</div>
+                    <div><span class="footer-dot"></span> All security modules operational</div>
                 </footer>
 
-            </section>
-
+            </div>
         </main>
-
     </div>
 
+    <!-- PACKET INSPECTOR MODAL -->
+    <div class="modal fade" id="alertDetailModal" tabindex="-1" aria-labelledby="alertDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content sentry-modal">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title" id="alertDetailModalLabel">
+                        <i class="fa-solid fa-shield-exclamation text-danger me-2"></i> Packet Threat Details
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="modalBodyContent">
+                    <!-- Dynamic content -->
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Bootstrap JS -->
-    <script
-        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js">
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- SENTRY JS -->
-    <script
-        src="{{ url_for('static', filename='js/dashboard.js') }}">
-    </script>
+    <!-- SENTRY Custom JS -->
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 
 </body>
 </html>
-```

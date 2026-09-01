@@ -331,10 +331,8 @@ The dashboard is structured into **5 interactive views**:
 
 ---
 
-## 👨‍💻 Project Team & Credit
+## 👨‍💻 Project Team 
 
-* **Institution**: Vishwakarma Institute of Technology (VIT, Pune)
-* **Department**: Computer Engineering Department
 * **Group Members**:
   1. Shidam Rohan Shriram 
   2. Sharma Pranav Ravindra 

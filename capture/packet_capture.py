@@ -11,10 +11,28 @@ from detection.rule_engine import analyze_packet
 from detection.signature_engine import match_signatures
 
 from ml.predict import predict_attack
-from database.database import save_alert, init_database
-
+from database.database import save_alert, init_database, log_traffic
 
 flow_tracker = FlowTracker(timeout=10)
+
+traffic_lock = threading.Lock()
+normal_packet_count = 0
+suspicious_packet_count = 0
+total_bytes_count = 0
+
+def log_traffic_stats_thread():
+    global normal_packet_count, suspicious_packet_count, total_bytes_count
+    while True:
+        time.sleep(3)
+        with traffic_lock:
+            normal = normal_packet_count
+            suspicious = suspicious_packet_count
+            bytes_val = total_bytes_count
+            normal_packet_count = 0
+            suspicious_packet_count = 0
+            total_bytes_count = 0
+        mbps = (bytes_val * 8) / (1_000_000 * 3)
+        log_traffic(normal, suspicious, mbps)
 
 
 def process_expired_flows():
@@ -71,6 +89,7 @@ def process_expired_flows():
 
 
 def process_packet(packet):
+    global normal_packet_count, suspicious_packet_count, total_bytes_count
 
     features = extract_packet_features(packet)
 
@@ -78,6 +97,9 @@ def process_packet(packet):
         return
 
     flow_tracker.add_packet(packet)
+
+    with traffic_lock:
+        total_bytes_count += features["packet_size"]
 
     print("\n--- Packet ---")
     print(f"{features['source_ip']} -> {features['destination_ip']}")
@@ -90,6 +112,8 @@ def process_packet(packet):
     signature_detections = match_signatures(features)
 
     if rule_detections or signature_detections:
+        with traffic_lock:
+            suspicious_packet_count += 1
 
         print("\n!!! SECURITY ALERT !!!")
 
@@ -135,6 +159,8 @@ def process_packet(packet):
             print("Signature alert saved to database.")
 
     else:
+        with traffic_lock:
+            normal_packet_count += 1
         print("Status: Normal")
 
 
@@ -156,6 +182,12 @@ def start_capture():
     )
 
     thread.start()
+
+    logger_thread = threading.Thread(
+        target=log_traffic_stats_thread,
+        daemon=True
+    )
+    logger_thread.start()
 
     sniff(
         prn=process_packet,

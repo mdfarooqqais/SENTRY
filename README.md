@@ -39,7 +39,7 @@ SENTRY addresses these limitations by offering an **open-source, multi-layer hyb
    - **Layer 1 (Rule-Based)**: Instantly detects port scans, packet size anomalies, and TCP SYN/FIN flag abuses.
    - **Layer 2 (Signature Matching)**: Matches packet signatures against known exploit service ports (Telnet, SMB, RDP, FTP, VNC).
    - **Layer 3 (Machine Learning Anomaly Detection)**: Employs a Random Forest Classifier trained on the **CICIDS2017** dataset (56,660 flows) to detect complex attack vectors (DoS, DDoS, Brute Force, Web Attacks).
-4. **SQLite Incident Logging**: Persists all security alerts, timestamps, IP 5-tuples, detection layers, threat severities (`HIGH`, `MEDIUM`, `LOW`), and confidence scores into `database/sentry.db`.
+4. **SQLite Telemetry & Incident Logging**: Persists all security alerts, timestamps, IP 5-tuples, detection layers, threat severities (`HIGH`, `MEDIUM`, `LOW`), confidence scores, and **real-time traffic bandwidth stats** into `database/sentry.db`.
 5. **Interactive SOC Monitoring Dashboard**: A web interface featuring live packet rate charts (Chart.js), searchable alert tables, terminal-style live packet logs, protocol breakdowns, exportable CSV reports, and a single-click attack simulator.
 
 ---
@@ -263,21 +263,29 @@ Open your browser and navigate to: **`http://127.0.0.1:5000`**
 
 ---
 
+### Step 5: Start the Live Packet Capture Engine (Required)
+
+To capture actual live packet streams and feed real telemetry to the dashboard, you must run the capture engine in a **separate terminal with Administrator privileges**.
+
+* **Windows (Open a new PowerShell as Administrator):**
+  ```cmd
+  cd path\to\SENTRY
+  .\venv\Scripts\activate
+  python -m capture.packet_capture
+  ```
+* **Linux (Open a new terminal):**
+  ```bash
+  cd path/to/SENTRY
+  source venv/bin/activate
+  sudo python -m capture.packet_capture
+  ```
+*(Note: Using `-m` runs it as a module, ensuring all project imports resolve correctly.)*
+
+---
+
 ### 📡 Running Optional Modules
 
-#### A. Run Live Network Packet Sniffer (Requires Administrator/Sudo)
-To capture actual live packet streams from your Wi-Fi or Ethernet adapter:
-
-* **Windows (Run PowerShell / CMD as Administrator):**
-  ```cmd
-  python capture/packet_capture.py
-  ```
-* **Linux:**
-  ```bash
-  sudo venv/bin/python capture/packet_capture.py
-  ```
-
-#### B. Train the Machine Learning Model (Offline Step)
+#### Train the Machine Learning Model (Offline Step)
 > [!NOTE]
 > A pre-trained model file is loaded by default. Follow these steps only if you wish to retrain the model on the full raw dataset.
 
@@ -301,8 +309,8 @@ The web dashboard provides **5 interactive SOC views**:
 
 1. 📊 **Security Overview (Dashboard Tab)**:
    - **System Banner**: Real-time monitoring status (`ONLINE` / `PAUSED`).
-   - **Live Telemetry Chart**: Real-time Chart.js graph tracking Normal vs. Suspicious packet rates per second.
-   - **KPI Stat Cards**: Total Packets Inspected, Security Alerts, Threats Detected, and ML Engine operational state.
+   - **Live Telemetry Chart**: Real-time Chart.js graph plotting your **actual live network traffic** and suspicious packet rates per second.
+   - **KPI Stat Cards**: Real-time counts of Total Packets Inspected, Security Alerts, Threats Detected, and ML Engine operational state.
    - **Recent Alerts Feed**: Real-time stream of detected security events.
 
 2. 🚨 **Alerts Management Tab**:
@@ -312,7 +320,7 @@ The web dashboard provides **5 interactive SOC views**:
    - **Clear Alerts**: Flush SQLite log history.
 
 3. 🌐 **Network Traffic Telemetry Tab**:
-   - **Throughput Meters**: Live Packets Per Second (PPS), Bandwidth Rate (MB/s), and Active Flow count.
+   - **Throughput Meters**: Real live Packets Per Second (PPS) and actual Bandwidth Rate (MB/s) passing through your network adapter.
    - **Terminal Log**: Real-time terminal stream feed logging incoming network packets with auto-scroll toggles.
 
 4. 📈 **Threat Statistics & Analytics Tab**:

@@ -30,6 +30,16 @@ def init_database():
         )
     """)
 
+    connection.execute("""
+        CREATE TABLE IF NOT EXISTS traffic_stats (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT NOT NULL,
+            normal_packets INTEGER,
+            suspicious_packets INTEGER,
+            bandwidth_mbps REAL
+        )
+    """)
+
     connection.commit()
     
     # Check if empty and seed initial data
@@ -148,6 +158,9 @@ def get_alert_stats():
 
     connection.close()
 
+    total_packets_row = get_connection().execute("SELECT SUM(normal_packets + suspicious_packets) FROM traffic_stats").fetchone()[0]
+    total_packets = total_packets_row if total_packets_row else 0
+
     return {
         "total_alerts": total_alerts,
         "high_count": high_count,
@@ -156,7 +169,8 @@ def get_alert_stats():
         "attack_count": attack_count,
         "attack_types": attack_types,
         "detection_types": detection_types,
-        "protocols": protocols
+        "protocols": protocols,
+        "total_packets": total_packets
     }
 
 
@@ -190,7 +204,25 @@ def seed_mock_data():
             timestamp=ts
         )
 
+def log_traffic(normal_packets, suspicious_packets, bandwidth_mbps):
+    connection = get_connection()
+    ts = datetime.now().strftime("%H:%M:%S")
+    connection.execute("""
+        INSERT INTO traffic_stats (timestamp, normal_packets, suspicious_packets, bandwidth_mbps)
+        VALUES (?, ?, ?, ?)
+    """, (ts, normal_packets, suspicious_packets, bandwidth_mbps))
+    connection.commit()
+    connection.close()
+
+def get_recent_traffic(limit=12):
+    connection = get_connection()
+    rows = connection.execute("""
+        SELECT * FROM traffic_stats ORDER BY id DESC LIMIT ?
+    """, (limit,)).fetchall()
+    connection.close()
+    return [dict(row) for row in reversed(rows)]
+
 
 if __name__ == "__main__":
     init_database()
-    print("Database initialized & seeded successfully.")
+    print("Database initialized & seeded successfully.")

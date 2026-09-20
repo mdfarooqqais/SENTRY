@@ -7,7 +7,8 @@ from database.database import (
     get_alerts,
     get_alert_stats,
     clear_alerts,
-    save_alert
+    save_alert,
+    get_recent_traffic
 )
 
 app = Flask(__name__)
@@ -45,9 +46,8 @@ def api_stats():
     stats = get_alert_stats()
     uptime_sec = int(time.time() - engine_state["start_time"])
 
-    # Simulate packet count growth if monitoring is active
-    if engine_state["monitoring"]:
-        engine_state["total_packets"] += random.randint(5, 25)
+    # Update global state with real packets
+    engine_state["total_packets"] = stats.get("total_packets", 0)
 
     return jsonify({
         "status": "success",
@@ -96,21 +96,38 @@ def api_alerts():
 
 @app.route("/api/traffic")
 def api_traffic():
-    """Generates real-time packet throughput metrics for live line charts."""
+    """Returns real-time packet throughput metrics from the database."""
+    traffic_data = get_recent_traffic(12)
+    
+    labels = []
+    normal_rates = []
+    attack_rates = []
+    
+    for row in traffic_data:
+        labels.append(row["timestamp"])
+        normal_rates.append(row["normal_packets"])
+        attack_rates.append(row["suspicious_packets"])
+        
+    # Fill remaining with 0s if we don't have 12 points yet
     now = datetime.now()
-    labels = [(now - timedelta(seconds=i*3)).strftime("%H:%M:%S") for i in range(12)][::-1]
-
-    # Generate synthetic traffic rate curve with realistic spikes
-    normal_rates = [random.randint(120, 240) for _ in range(12)]
-    attack_rates = [random.randint(5, 45) for _ in range(12)]
+    while len(labels) < 12:
+        labels.insert(0, (now - timedelta(seconds=(12-len(labels))*3)).strftime("%H:%M:%S"))
+        normal_rates.insert(0, 0)
+        attack_rates.insert(0, 0)
+        
+    current_pps = 0
+    bandwidth_mbps = 0.0
+    if traffic_data:
+        current_pps = (traffic_data[-1]["normal_packets"] + traffic_data[-1]["suspicious_packets"]) // 3
+        bandwidth_mbps = round(traffic_data[-1]["bandwidth_mbps"], 2)
 
     return jsonify({
         "status": "success",
-        "timestamps": labels,
-        "normal_packets": normal_rates,
-        "suspicious_packets": attack_rates,
-        "current_pps": random.randint(140, 280),
-        "bandwidth_mbps": round(random.uniform(1.2, 4.8), 2)
+        "timestamps": labels[-12:],
+        "normal_packets": normal_rates[-12:],
+        "suspicious_packets": attack_rates[-12:],
+        "current_pps": current_pps,
+        "bandwidth_mbps": bandwidth_mbps
     })
 
 
@@ -171,4 +188,4 @@ def api_alerts_simulate():
 
 if __name__ == "__main__":
     init_database()
-    app.run(debug=True)
+    app.run(debug=True)

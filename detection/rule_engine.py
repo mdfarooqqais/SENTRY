@@ -34,12 +34,14 @@ def check_suspicious_port(features):
 def check_large_packet(features):
     packet_size = features.get("packet_size", 0)
 
-    if packet_size > 1500:
+    # Only flag truly abnormal packets (jumbo frames > 9000 bytes)
+    # Normal traffic can easily reach 1500 bytes (standard Ethernet MTU)
+    if packet_size > 9000:
         return {
             "detected": True,
-            "attack_type": "Large Packet",
-            "severity": "LOW",
-            "reason": f"Unusually large packet detected: {packet_size} bytes"
+            "attack_type": "Oversized Packet (Possible DoS)",
+            "severity": "MEDIUM",
+            "reason": f"Jumbo packet detected: {packet_size} bytes (> 9000 byte threshold)"
         }
 
     return None
@@ -94,6 +96,20 @@ def check_port_scan(features):
             "reason": f"{len(unique_ports)} destination ports contacted within 10 seconds"
         }
 
+    return None
+
+
+def check_tiny_packet(features):
+    packet_size = features.get("packet_size", 0)
+
+    # Ethernet frames less than 64 bytes are often anomalous (e.g. malformed or pure header scans)
+    if packet_size < 64 and packet_size > 0:
+        return {
+            "detected": True,
+            "attack_type": "Tiny Packet (Possible Scan/Flood)",
+            "severity": "LOW",
+            "reason": f"Abnormally small packet detected: {packet_size} bytes"
+        }
     return None
 
 

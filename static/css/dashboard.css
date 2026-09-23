@@ -1,4 +1,4 @@
-:root {
+﻿:root {
     --bg-main: #080c14;
     --bg-panel: #0e1523;
     --bg-panel-hover: #131c2e;
@@ -671,15 +671,13 @@ a {
     overflow-y: auto;
     border-top: 1px solid var(--border);
 }
-
-.terminal-line {
-    margin-bottom: 6px;
-    line-height: 1.5;
-}
-
+.terminal-line { margin-bottom: 5px; line-height: 1.6; }
 .terminal-line.system { color: #8aa2c0; }
-.terminal-line.threat { color: var(--danger); font-weight: 600; }
 .terminal-line.normal { color: var(--accent); }
+.terminal-line.threat { color: var(--danger); font-weight: 700; }
+.terminal-line.tcp    { color: #5d8cff; }
+.terminal-line.udp    { color: #c3a6ff; }
+.terminal-line.icmp   { color: var(--warning); }
 
 
 /* SENTRY MODAL */
@@ -730,3 +728,4 @@ a {
     .system-online { display: none; }
     .dashboard-container { padding: 18px 15px; }
 }
+

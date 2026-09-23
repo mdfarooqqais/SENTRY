@@ -188,7 +188,7 @@ def api_alerts_simulate():
 
 @app.route("/api/terminal")
 def api_terminal():
-    packets = get_recent_packets(50)
+    packets = get_recent_packets(200)
     return jsonify({
         "status": "success",
         "packets": packets

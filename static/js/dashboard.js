@@ -1,4 +1,4 @@
-document.addEventListener("DOMContentLoaded", function () {
+﻿document.addEventListener("DOMContentLoaded", function () {
     // 1. Initialize clock & navigation
     updateClock();
     setInterval(updateClock, 1000);
@@ -337,7 +337,7 @@ function renderAlertsTables(alerts) {
                 <td><span class="badge-layer">${alert.detection_type}</span></td>
                 <td class="fw-bold text-light">${alert.attack_type}</td>
                 <td>${getSeverityBadge(alert.severity)}</td>
-                <td class="text-slate-200">${(alert.confidence * 100).toFixed(0)}%</td>
+                <td>${getClassificationBadge(alert.confidence)}</td>
                 <td>
                     <button class="btn btn-sm btn-outline-info py-0 px-2 text-slate-200" onclick="inspectAlert(${alert.id})">
                         <i class="fa-solid fa-eye"></i>
@@ -359,12 +359,7 @@ function renderAlertsTables(alerts) {
                 <td><span class="badge-layer">${alert.detection_type}</span></td>
                 <td class="fw-bold text-light">${alert.attack_type}</td>
                 <td>${getSeverityBadge(alert.severity)}</td>
-                <td>
-                    <div class="progress bg-dark" style="height: 6px; width: 60px;">
-                        <div class="progress-bar ${alert.severity === 'HIGH' ? 'bg-danger' : 'bg-warning'}" style="width: ${(alert.confidence * 100)}%"></div>
-                    </div>
-                    <small class="text-slate-300" style="font-size: 9.5px; font-weight: 600;">${(alert.confidence * 100).toFixed(0)}%</small>
-                </td>
+                <td>${getClassificationBadge(alert.confidence)}</td>
                 <td>
                     <button class="btn btn-sm btn-outline-accent py-0 px-2" onclick="inspectAlert(${alert.id})">
                         Inspect
@@ -565,44 +560,85 @@ function initPacketTerminal() {
     const autoScrollBtn = document.getElementById("autoScrollToggle");
     const clearTermBtn = document.getElementById("clearTerminalBtn");
 
+    if (!terminal) return;
+
     if (autoScrollBtn) {
         autoScrollBtn.addEventListener("click", function () {
             SENTRY.autoScrollTerminal = !SENTRY.autoScrollTerminal;
-            autoScrollBtn.innerHTML = `<i class="fa-solid fa-down-long me-1"></i> Auto-Scroll: ${SENTRY.autoScrollTerminal ? 'ON' : 'OFF'}`;
+            autoScrollBtn.textContent = "Auto-Scroll: " + (SENTRY.autoScrollTerminal ? "ON" : "OFF");
         });
     }
 
-    if (clearTermBtn && terminal) {
+    if (clearTermBtn) {
         clearTermBtn.addEventListener("click", function () {
-            terminal.innerHTML = `<div class="terminal-line system">[SENTRY TERMINAL] Log cleared. Listening for new packets...</div>`;
+            terminal.innerHTML = "<div class=\"terminal-line system\">[SENTRY TERMINAL] Log cleared.</div>";
         });
     }
 
-    setInterval(async () => {
-        if (!SENTRY.monitoring || !terminal) return;
+    async function fetchAndRenderPackets() {
         try {
             const res = await fetch("/api/terminal");
+            if (!res.ok) throw new Error("HTTP " + res.status);
             const data = await res.json();
-            
-            if (data.status === "success" && data.packets.length > 0) {
-                terminal.innerHTML = ""; // Fast clear
-                data.packets.forEach(pkt => {
+            if (data.packets && data.packets.length > 0) {
+                terminal.innerHTML = "";
+                data.packets.forEach(function(pkt) {
                     const line = document.createElement("div");
-                    if (pkt.includes("THREAT")) {
-                        line.className = "terminal-line threat";
-                    } else {
-                        line.className = "terminal-line normal";
+                    line.style.cssText = "display:flex;align-items:baseline;gap:8px;margin-bottom:4px;font-size:11.5px;line-height:1.6;";
+
+                    // Parse tag from log string (e.g. [BENIGN], [SUSPICIOUS], [MALICIOUS])
+                    let dotColor = "#7c86a0";
+                    let textColor = "#a0b0c0";
+
+                    if (pkt.includes("[MALICIOUS]")) {
+                        dotColor = "#ff5364";
+                        textColor = "#ff5364";
+                        line.style.fontWeight = "700";
+                    } else if (pkt.includes("[SUSPICIOUS]")) {
+                        dotColor = "#ffbd59";
+                        textColor = "#ffbd59";
+                    } else if (pkt.includes("[BENIGN]")) {
+                        dotColor = "#b0a0e0";
+                        textColor = "#a0b0c0";
                     }
-                    line.textContent = pkt;
+
+                    // Dot indicator
+                    const dot = document.createElement("span");
+                    dot.style.cssText = "display:inline-block;width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px;background:" + dotColor;
+
+                    // Timestamp prefix
+                    const tsMatch = pkt.match(/^\[(\d{2}:\d{2}:\d{2})\]/);
+                    const ts = tsMatch ? '<span style="color:#4a6080">[' + tsMatch[1] + ']</span> ' : '';
+
+                    // Text
+                    const text = document.createElement("span");
+                    text.style.color = textColor;
+                    text.innerHTML = ts + pkt.replace(/^\[\d{2}:\d{2}:\d{2}\]\s*/, "");
+
+                    line.appendChild(dot);
+                    line.appendChild(text);
                     terminal.appendChild(line);
                 });
-
-                if (SENTRY.autoScrollTerminal) {
-                    terminal.scrollTop = terminal.scrollHeight;
+                if (SENTRY.autoScrollTerminal) { terminal.scrollTop = terminal.scrollHeight; }
+            } else {
+                if (terminal.children.length <= 2) {
+                    terminal.innerHTML = "<div class=\"terminal-line system\">[SENTRY] Waiting for capture engine...</div>";
                 }
             }
-        } catch (e) {
-            console.error("Terminal fetch error:", e);
-        }
-    }, 1500);
+        } catch (e) { console.error("Terminal fetch error:", e); }
+    }
+
+    fetchAndRenderPackets();
+    setInterval(fetchAndRenderPackets, 1500);
+}
+
+function getClassificationBadge(conf) {
+    let pct = conf * 100;
+    if (pct <= 30) {
+        return '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#b0a0e0;margin-right:8px;box-shadow:0 0 5px #b0a0e0;"></span><span style="color:#b0a0e0;font-weight:600;">White / Benign</span>';
+    } else if (pct <= 70) {
+        return '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ffbd59;margin-right:8px;box-shadow:0 0 5px #ffbd59;"></span><span style="color:#ffbd59;font-weight:600;">Suspicious / Anomaly</span>';
+    } else {
+        return '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ff5364;margin-right:8px;box-shadow:0 0 5px #ff5364;"></span><span style="color:#ff5364;font-weight:600;">Malicious / Attack</span>';
+    }
 }

@@ -8,7 +8,8 @@ from database.database import (
     get_alert_stats,
     clear_alerts,
     save_alert,
-    get_recent_traffic
+    get_recent_traffic,
+    get_recent_packets
 )
 
 app = Flask(__name__)
@@ -185,6 +186,13 @@ def api_alerts_simulate():
         "message": "Simulated threat injected into SENTRY alert queue"
     })
 
+@app.route("/api/terminal")
+def api_terminal():
+    packets = get_recent_packets(50)
+    return jsonify({
+        "status": "success",
+        "packets": packets
+    })
 
 if __name__ == "__main__":
     init_database()

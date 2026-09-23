@@ -40,6 +40,14 @@ def init_database():
         )
     """)
 
+    connection.execute("""
+        CREATE TABLE IF NOT EXISTS packet_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT NOT NULL,
+            log_text TEXT NOT NULL
+        )
+    """)
+
     connection.commit()
     
     # Check if empty and seed initial data
@@ -221,6 +229,28 @@ def get_recent_traffic(limit=12):
     """, (limit,)).fetchall()
     connection.close()
     return [dict(row) for row in reversed(rows)]
+
+
+def log_raw_packets_batch(log_strings):
+    if not log_strings:
+        return
+    connection = get_connection()
+    ts = datetime.now().strftime("%H:%M:%S")
+    # Prepare batch data
+    batch_data = [(ts, log) for log in log_strings]
+    connection.executemany("""
+        INSERT INTO packet_logs (timestamp, log_text) VALUES (?, ?)
+    """, batch_data)
+    connection.commit()
+    connection.close()
+
+def get_recent_packets(limit=50):
+    connection = get_connection()
+    rows = connection.execute("""
+        SELECT timestamp, log_text FROM packet_logs ORDER BY id DESC LIMIT ?
+    """, (limit,)).fetchall()
+    connection.close()
+    return [f"[{row['timestamp']}] {row['log_text']}" for row in reversed(rows)]
 
 
 if __name__ == "__main__":

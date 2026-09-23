@@ -578,31 +578,31 @@ function initPacketTerminal() {
         });
     }
 
-    const sampleIPs = ["192.168.1.105", "10.0.0.45", "172.16.0.12", "192.168.1.110", "192.168.1.50", "10.0.0.88"];
-    const protocols = ["TCP", "UDP", "HTTP", "DNS"];
-
-    setInterval(() => {
+    setInterval(async () => {
         if (!SENTRY.monitoring || !terminal) return;
+        try {
+            const res = await fetch("/api/terminal");
+            const data = await res.json();
+            
+            if (data.status === "success" && data.packets.length > 0) {
+                terminal.innerHTML = ""; // Fast clear
+                data.packets.forEach(pkt => {
+                    const line = document.createElement("div");
+                    if (pkt.includes("THREAT")) {
+                        line.className = "terminal-line threat";
+                    } else {
+                        line.className = "terminal-line normal";
+                    }
+                    line.textContent = pkt;
+                    terminal.appendChild(line);
+                });
 
-        const src = sampleIPs[Math.floor(Math.random() * sampleIPs.length)];
-        const proto = protocols[Math.floor(Math.random() * protocols.length)];
-        const srcPort = Math.floor(Math.random() * 40000) + 10000;
-        const dstPort = [80, 443, 22, 53, 3389][Math.floor(Math.random() * 5)];
-        const len = Math.floor(Math.random() * 1200) + 64;
-        const ts = new Date().toISOString().slice(11, 19);
-
-        const line = document.createElement("div");
-        line.className = "terminal-line normal";
-        line.textContent = `[${ts}] ${proto} ${src}:${srcPort} -> 10.0.0.1:${dstPort} [LEN ${len}b] FLAGS=[SYN] SENTRY_EVAL=BENIGN`;
-
-        terminal.appendChild(line);
-
-        if (terminal.children.length > 100) {
-            terminal.removeChild(terminal.children[0]);
-        }
-
-        if (SENTRY.autoScrollTerminal) {
-            terminal.scrollTop = terminal.scrollHeight;
+                if (SENTRY.autoScrollTerminal) {
+                    terminal.scrollTop = terminal.scrollHeight;
+                }
+            }
+        } catch (e) {
+            console.error("Terminal fetch error:", e);
         }
     }, 1500);
 }
